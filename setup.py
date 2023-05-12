@@ -87,7 +87,7 @@ class CcFlags(object):
   def _check_flags(self, copts, ldflags, code):
     try:
       suffix = '.cc' if self.language == 'c++' else '.c'
-      with open(os.path.join(self.tmp, 'add' + suffix), 'w') as f:
+      with open(os.path.join(self.tmp, f'add{suffix}'), 'w') as f:
         f.write(code)
         f.flush()
         objs = self.compiler.compile(sources=[f.name],
@@ -131,14 +131,14 @@ class BuildExt(build_ext.build_ext):
           '/EHsc',  # allow c++ to have exceptions but not c
       ]
 
-    else:  # unix, gnu, mingw32, etc.
-      cflags.copts += ['-DVERSION_INFO="%s"' % self.distribution.get_version()]
+    else:# unix, gnu, mingw32, etc.
+      cflags.copts += [f'-DVERSION_INFO="{self.distribution.get_version()}"']
       if sys.platform == 'darwin':
         cflags.add_if_supported(copts=['-mmacosx-version-min=10.7'])
         cxxflags.add_if_supported(copts=['-stdlib=libc++'])
 
       # pybind11 needs c++11 but has smaller footprint with c++14
-      if not cxxflags.add_if_supported(
+      if (not cxxflags.add_if_supported(
           copts=['-std=c++14'],
           code='''
             // Old Ubuntu14 + Clang5 results in enable_if_t error.
@@ -151,9 +151,9 @@ class BuildExt(build_ext.build_ext):
             int double_add_and(int x, int y) {
               return dubs<int>(x) + dubs<int>(y);
             }
-          '''):
-        if not cxxflags.add_if_supported(copts=['-std=c++11']):
-          raise RuntimeError('Need compiler with C++11 support')
+          ''',
+      ) and not cxxflags.add_if_supported(copts=['-std=c++11'])):
+        raise RuntimeError('Need compiler with C++11 support')
 
       # symbols hidden by default matters with pybind11
       if cflags.add_if_supported(copts=['-fvisibility=hidden']):
